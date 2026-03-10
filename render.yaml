@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: quiz-bot
+    runtime: docker
+    plan: free
+    envVars:
+      - key: BOT__TOKEN
+        sync: false
+      - key: BOT__ADMIN_IDS
+        value: "[123456789]"
+      - key: DB__URL
+        fromDatabase:
+          name: quiz-bot-db
+          property: connectionString
+      - key: LLM__PROVIDER
+        value: "openai"
+      - key: LLM__OPENAI_API_KEY
+        sync: false
+      - key: LLM__OPENAI_MODEL
+        value: "gpt-4o-mini"
+      - key: LLM__ANTHROPIC_API_KEY
+        sync: false
+      - key: LLM__ANTHROPIC_MODEL
+        value: "claude-sonnet-4-20250514"
+      - key: ANALYSIS__MESSAGE_THRESHOLD
+        value: "10"
+      - key: ANALYSIS__CONFIDENCE_THRESHOLD
+        value: "0.7"
+      - key: ANALYSIS__BUFFER_SIZE
+        value: "100"
+      - key: RATE_LIMIT__PROACTIVE_COOLDOWN_SECONDS
+        value: "120"
+      - key: RATE_LIMIT__BUCKET_RATE
+        value: "0.008"
+      - key: RATE_LIMIT__BUCKET_CAPACITY
+        value: "5"
+      - key: RATE_LIMIT__DAILY_PROACTIVE_CAP
+        value: "20"
+      - key: RATE_LIMIT__COMMAND_COOLDOWN_SECONDS
+        value: "5"
+      - key: QUIZ__INACTIVITY_THRESHOLD_MINUTES
+        value: "120"
+      - key: QUIZ__QUESTION_TIMEOUT_SECONDS
+        value: "30"
+      - key: DB__MESSAGE_RETENTION_DAYS
+        value: "90"
+
+databases:
+  - name: quiz-bot-db
+    plan: free
+    databaseName: quiz_bot
+    user: quiz_bot
