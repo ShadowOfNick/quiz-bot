@@ -140,7 +140,18 @@ async def run_webhook(settings: Settings) -> None:
     # Run on the port Render provides
     port = int(os.getenv("PORT", "10000"))
     logger.info(f"Starting webhook server on port {port}")
-    web.run_app(app, host="0.0.0.0", port=port)
+
+    # Use AppRunner instead of web.run_app to avoid event loop conflict
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host="0.0.0.0", port=port)
+    await site.start()
+
+    # Keep running forever
+    try:
+        await asyncio.Event().wait()
+    finally:
+        await runner.cleanup()
 
 
 async def run_polling(settings: Settings) -> None:
