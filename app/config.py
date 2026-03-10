@@ -8,13 +8,9 @@ class BotSettings(BaseModel):
 
 
 class LLMSettings(BaseModel):
-    provider: str = "openai"
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-20250514"
+    provider: str = "gemma"
     gemma_api_key: str = ""
-    gemma_model: str = "gemini-1.5-flash"
+    gemma_model: str = "gemma-3-27b-it"
     max_tokens: int = 500
     temperature: float = 0.7
 

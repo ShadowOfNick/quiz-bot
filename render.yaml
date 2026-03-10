@@ -13,15 +13,11 @@ services:
           name: quiz-bot-db
           property: connectionString
       - key: LLM__PROVIDER
-        value: "openai"
-      - key: LLM__OPENAI_API_KEY
+        value: "gemma"
+      - key: LLM__GEMMA_API_KEY
         sync: false
-      - key: LLM__OPENAI_MODEL
-        value: "gpt-4o-mini"
-      - key: LLM__ANTHROPIC_API_KEY
-        sync: false
-      - key: LLM__ANTHROPIC_MODEL
-        value: "claude-sonnet-4-20250514"
+      - key: LLM__GEMMA_MODEL
+        value: "gemma-3-27b-it"
       - key: ANALYSIS__MESSAGE_THRESHOLD
         value: "10"
       - key: ANALYSIS__CONFIDENCE_THRESHOLD
