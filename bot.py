@@ -71,6 +71,7 @@ def create_bot_and_dispatcher(settings: Settings):
     # Inject services into dispatcher workflow_data
     dp.workflow_data.update(
         {
+            "db_pool": db,
             "message_buffer": buffer,
             "ai_analyzer": ai_analyzer,
             "birthday_parser": birthday_parser,

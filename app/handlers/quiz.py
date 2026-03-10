@@ -12,6 +12,7 @@ from aiogram.types import (
 
 import asyncpg
 
+from app.db.database import Database
 from app.db.repositories.quiz_repo import QuizRepository
 from app.db.repositories.user_repo import UserRepository
 from app.services.quiz_service import QuizService
@@ -44,7 +45,7 @@ async def wait_and_finish_quiz(
     quiz_id: str,
     quiz_service: QuizService,
     bot: Bot,
-    db: asyncpg.Connection,
+    db_pool: Database,
     timeout: int = 30,
 ) -> None:
     await asyncio.sleep(timeout)
@@ -52,14 +53,15 @@ async def wait_and_finish_quiz(
     if session and session.id == quiz_id and not session.finished:
         finished = quiz_service.finish_quiz(chat_id)
         if finished:
-            repo = QuizRepository(db)
-            await quiz_service.save_scores(finished, repo)
+            async with db_pool.pool.acquire() as conn:
+                repo = QuizRepository(conn)
+                await quiz_service.save_scores(finished, repo)
 
-            user_repo = UserRepository(db)
-            usernames = {}
-            for uid in finished.answers:
-                user = await user_repo.get(uid)
-                usernames[uid] = user.username or user.display_name if user else f"user_{uid}"
+                user_repo = UserRepository(conn)
+                usernames = {}
+                for uid in finished.answers:
+                    user = await user_repo.get(uid)
+                    usernames[uid] = user.username or user.display_name if user else f"user_{uid}"
                 
             results = finished.get_results_text(usernames)
             try:
@@ -76,7 +78,7 @@ async def wait_and_finish_quiz(
 async def cmd_quiz(
     message: Message,
     bot: Bot,
-    db: asyncpg.Connection,
+    db_pool: Database,
     quiz_service: QuizService,
     message_buffer: MessageBuffer,
 ) -> None:
@@ -111,7 +113,7 @@ async def cmd_quiz(
 
     # Schedule auto-finish
     asyncio.create_task(
-        wait_and_finish_quiz(chat_id, session.id, quiz_service, bot, db)
+        wait_and_finish_quiz(chat_id, session.id, quiz_service, bot, db_pool)
     )
 
 @router.message(Command("quiz_scores"))
@@ -151,7 +153,7 @@ async def cmd_quiz_scores(
 async def quiz_suggest_yes(
     callback: CallbackQuery,
     bot: Bot,
-    db: asyncpg.Connection,
+    db_pool: Database,
     quiz_service: QuizService,
     message_buffer: MessageBuffer,
 ) -> None:
@@ -182,7 +184,7 @@ async def quiz_suggest_yes(
 
     # Schedule auto-finish
     asyncio.create_task(
-        wait_and_finish_quiz(chat_id, session.id, quiz_service, bot, db)
+        wait_and_finish_quiz(chat_id, session.id, quiz_service, bot, db_pool)
     )
 
 @router.callback_query(lambda c: c.data == "quiz:suggest:no")

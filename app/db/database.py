@@ -91,11 +91,24 @@ class Database:
 
     async def initialize(self) -> None:
         """Инициализация пула соединений и создание таблиц"""
+        kwargs = {
+            "min_size": 2,
+            "max_size": 10,
+            "command_timeout": 60,
+        }
+        
+        # Поддержка Neon Serverless Postgres (включая PgBouncer pooler)
+        if "neon.tech" in self._db_url:
+            kwargs["target_session_attrs"] = "read-write"
+            
+            # При использовании Transaction Mode (PgBouncer) в Neon, 
+            # нужно отключить кэширование подготовленных запросов
+            if "-pooler" in self._db_url:
+                kwargs["statement_cache_size"] = 0
+
         self._pool = await asyncpg.create_pool(
             self._db_url,
-            min_size=2,
-            max_size=10,
-            command_timeout=60,
+            **kwargs
         )
         logger.info("Database pool created")
 
