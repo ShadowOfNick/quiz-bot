@@ -9,7 +9,7 @@ from aiogram.types import (
     Message,
 )
 
-import aiosqlite
+import asyncpg
 
 from app.config import Settings
 from app.db.repositories.link_repo import LinkRepository
@@ -32,7 +32,7 @@ router = Router()
 @router.message(F.text & F.chat.type.in_({"group", "supergroup"}))
 async def handle_group_message(
     message: Message,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
     message_buffer: MessageBuffer,
     ai_analyzer: AIAnalyzer,
     birthday_parser: BirthdayParser,

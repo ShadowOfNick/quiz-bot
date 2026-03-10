@@ -10,7 +10,7 @@ from aiogram.types import (
     Message,
 )
 
-import aiosqlite
+import asyncpg
 
 from app.db.repositories.quiz_repo import QuizRepository
 from app.db.repositories.user_repo import UserRepository
@@ -44,7 +44,7 @@ async def wait_and_finish_quiz(
     quiz_id: str,
     quiz_service: QuizService,
     bot: Bot,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
     timeout: int = 30,
 ) -> None:
     await asyncio.sleep(timeout)
@@ -76,7 +76,7 @@ async def wait_and_finish_quiz(
 async def cmd_quiz(
     message: Message,
     bot: Bot,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
     quiz_service: QuizService,
     message_buffer: MessageBuffer,
 ) -> None:
@@ -117,7 +117,7 @@ async def cmd_quiz(
 @router.message(Command("quiz_scores"))
 async def cmd_quiz_scores(
     message: Message,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
 ) -> None:
     repo = QuizRepository(db)
     leaderboard = await repo.get_leaderboard(message.chat.id)
@@ -151,7 +151,7 @@ async def cmd_quiz_scores(
 async def quiz_suggest_yes(
     callback: CallbackQuery,
     bot: Bot,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
     quiz_service: QuizService,
     message_buffer: MessageBuffer,
 ) -> None:
@@ -196,7 +196,7 @@ async def quiz_suggest_no(callback: CallbackQuery) -> None:
 async def quiz_answer_callback(
     callback: CallbackQuery,
     quiz_service: QuizService,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
 ) -> None:
     if not callback.data or not callback.from_user:
         return

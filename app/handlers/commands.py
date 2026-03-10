@@ -5,7 +5,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-import aiosqlite
+import asyncpg
 
 from app.db.repositories.link_repo import LinkRepository
 from app.db.repositories.reminder_repo import ReminderRepository
@@ -56,7 +56,7 @@ async def cmd_help(message: Message) -> None:
 @router.message(Command("stats"))
 async def cmd_stats(
     message: Message,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
     stats_service: StatsService,
 ) -> None:
     repo = StatsRepository(db)
@@ -67,7 +67,7 @@ async def cmd_stats(
 @router.message(Command("birthday"))
 async def cmd_birthday(
     message: Message,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
 ) -> None:
     if not message.from_user:
         return
@@ -96,7 +96,7 @@ async def cmd_birthday(
 @router.message(Command("links"))
 async def cmd_links(
     message: Message,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
 ) -> None:
     repo = LinkRepository(db)
     links = await repo.get_recent(message.chat.id, limit=15)

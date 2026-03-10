@@ -10,7 +10,7 @@ from datetime import datetime
 from aiogram import Router
 from aiogram.types import CallbackQuery
 
-import aiosqlite
+import asyncpg
 
 from app.db.repositories.user_repo import UserRepository
 
@@ -22,7 +22,7 @@ router = Router()
 @router.callback_query(lambda c: c.data and c.data.startswith("birthday:save:"))
 async def birthday_save_callback(
     callback: CallbackQuery,
-    db: aiosqlite.Connection,
+    db: asyncpg.Connection,
 ) -> None:
     """Handle birthday save confirmation."""
     if not callback.data or not callback.message:

@@ -69,19 +69,20 @@ async def check_reminders(
     db: Database,
 ) -> None:
     """Fire due reminders."""
-    repo = ReminderRepository(db.connection)
-    due = await repo.get_due()
+    async with db.pool.acquire() as conn:
+        repo = ReminderRepository(conn)
+        due = await repo.get_due()
 
-    for reminder in due:
-        try:
-            await bot.send_message(
-                reminder.chat_id,
-                f"⏰ <b>Напоминание!</b>\n\n{reminder.reminder_text}",
-                parse_mode="HTML",
-            )
-            await repo.mark_fired(reminder.id)
-        except Exception:
-            logger.exception("Failed to send reminder %s", reminder.id)
+        for reminder in due:
+            try:
+                await bot.send_message(
+                    reminder.chat_id,
+                    f"⏰ <b>Напоминание!</b>\n\n{reminder.reminder_text}",
+                    parse_mode="HTML",
+                )
+                await repo.mark_fired(reminder.id)
+            except Exception:
+                logger.exception("Failed to send reminder %s", reminder.id)
 
 
 async def check_birthdays(
@@ -90,9 +91,10 @@ async def check_birthdays(
     buffer: MessageBuffer,
 ) -> None:
     """Check and announce today's birthdays."""
-    service = BirthdayService()
-    repo = UserRepository(db.connection)
-    birthdays = await service.check_todays_birthdays(repo)
+    async with db.pool.acquire() as conn:
+        service = BirthdayService()
+        repo = UserRepository(conn)
+        birthdays = await service.check_todays_birthdays(repo)
 
     if not birthdays:
         return
@@ -115,8 +117,9 @@ async def check_upcoming_birthdays(
     """Check and announce upcoming birthdays (7 days or 1 day ahead)."""
     from datetime import timedelta, date
 
-    user_repo = UserRepository(db.connection)
-    upcoming = await user_repo.get_upcoming_birthdays(days_ahead)
+    async with db.pool.acquire() as conn:
+        user_repo = UserRepository(conn)
+        upcoming = await user_repo.get_upcoming_birthdays(days_ahead)
 
     if not upcoming:
         return
@@ -151,43 +154,43 @@ async def cleanup_old_messages(
     retention_days = settings.db.message_retention_days
 
     try:
-        # Delete old messages
-        cursor = await db.connection.execute(
-            """DELETE FROM messages
-               WHERE created_at < datetime('now', ? || ' days')""",
-            (f"-{retention_days}",),
-        )
-        await db.connection.commit()
-        deleted_messages = cursor.rowcount
-
-        if deleted_messages > 0:
-            logger.info(
-                "Cleaned up %d messages older than %d days",
-                deleted_messages,
+        async with db.pool.acquire() as conn:
+            # Delete old messages
+            result = await conn.execute(
+                """DELETE FROM messages
+                   WHERE created_at < NOW() - INTERVAL '$1 days'""",
+            )
+            # Use parameterized interval
+            result = await conn.execute(
+                "DELETE FROM messages WHERE created_at < NOW() - make_interval(days => $1)",
                 retention_days,
             )
+            deleted_messages = int(result.split()[-1]) if result else 0
 
-        # Delete fired reminders (already sent)
-        cursor = await db.connection.execute(
-            """DELETE FROM reminders
-               WHERE is_fired = TRUE""",
-        )
-        await db.connection.commit()
-        deleted_reminders = cursor.rowcount
+            if deleted_messages > 0:
+                logger.info(
+                    "Cleaned up %d messages older than %d days",
+                    deleted_messages,
+                    retention_days,
+                )
 
-        if deleted_reminders > 0:
-            logger.info("Cleaned up %d fired reminders", deleted_reminders)
+            # Delete fired reminders (already sent)
+            result = await conn.execute(
+                "DELETE FROM reminders WHERE is_fired = TRUE",
+            )
+            deleted_reminders = int(result.split()[-1]) if result else 0
 
-        # Also clean up old stats (keep last 30 days)
-        cursor = await db.connection.execute(
-            """DELETE FROM bot_daily_stats
-               WHERE date < date('now', '-30 days')""",
-        )
-        await db.connection.commit()
-        deleted_stats = cursor.rowcount
+            if deleted_reminders > 0:
+                logger.info("Cleaned up %d fired reminders", deleted_reminders)
 
-        if deleted_stats > 0:
-            logger.info("Cleaned up %d old stats records", deleted_stats)
+            # Also clean up old stats (keep last 30 days)
+            result = await conn.execute(
+                "DELETE FROM bot_daily_stats WHERE date < NOW() - INTERVAL '30 days'",
+            )
+            deleted_stats = int(result.split()[-1]) if result else 0
+
+            if deleted_stats > 0:
+                logger.info("Cleaned up %d old stats records", deleted_stats)
 
     except Exception:
         logger.exception("Failed to cleanup old data")
